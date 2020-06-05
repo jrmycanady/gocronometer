@@ -30,6 +30,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("password is empty, is GOCRONOMETER_TEST_PASSWORD set?")
 	}
 
+	t.Errorf("%d:%d", len(username), len(password))
 	t.Errorf("%s:%s", username, password)
 
 	c := gocronometer.NewClient()
