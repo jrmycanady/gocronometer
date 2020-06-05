@@ -87,6 +87,7 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 	if err != nil {
 		return fmt.Errorf("failed while executing http request for login: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -135,6 +136,7 @@ func (c *Client) RetrieveAntiCSRF(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed issuing HTTP request: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -197,6 +199,7 @@ func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for gwt token generation: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -218,6 +221,8 @@ func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 	return match[1], nil
 }
 
+// ExportDailyNutrition exports the daily nutrition values within the date range. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is the raw string data.
 func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, endDate time.Time) (string, error) {
 	// Generating the required token.
 	token, err := c.GenerateAuthToken(ctx)
@@ -246,6 +251,7 @@ func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, 
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for daily nutrition export: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -292,6 +298,7 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for servings export: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -308,6 +315,8 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 
 }
 
+// ExportExercises exports the exercises within the date range. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is the raw string data.
 func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDate time.Time) (string, error) {
 	// Generating the required token.
 	token, err := c.GenerateAuthToken(ctx)
@@ -336,6 +345,7 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for exercises export: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -351,6 +361,8 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	return string(body), nil
 }
 
+// ExportBiometrics exports the biometrics within the date range. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is the raw string data.
 func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endDate time.Time) (string, error) {
 	// Generating the required token.
 	token, err := c.GenerateAuthToken(ctx)
@@ -379,6 +391,7 @@ func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endD
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for biometrics export: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -394,6 +407,8 @@ func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endD
 	return string(body), nil
 }
 
+// ExportNotes exports the notes within the date range. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is the raw string data.
 func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate time.Time) (string, error) {
 	// Generating the required token.
 	token, err := c.GenerateAuthToken(ctx)
@@ -422,6 +437,7 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 	if err != nil {
 		return "", fmt.Errorf("failed while executing http request for notes export: %s", err)
 	}
+	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
