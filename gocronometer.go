@@ -40,16 +40,26 @@ const (
 const (
 	// GWTRPCGenerateAuthorizationToken generates an authorization token. The only use known at this point is to provide
 	// it as a nonce to the export calls.
-	// Need to provide fmt.Sprintf() a nonce string to insert into the call. The nonce appears to really be used as a
-	// session for GWT calls...
-	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|70646|3600|7|2|"
+	// Need to provide fmt.Sprintf() a nonce string to insert into the call as well as the UserID. The nonce appears to
+	// really be used as a session for GWT calls...
+	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
+
+	// GWTRPCGWTAuthenticate authenticates with the GWT API.
+	GWTRPCGWTAuthenticate = "" +
+		"" +
+		"7|0|7|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
 )
 
 var GWTTokenRegex = regexp.MustCompile("\"(?P<token>.*)\"")
 
+const GWTAuthRegex = `//OK\[(?P<userid>\d*),.*"(?P<nonce>[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})`
+
+var GWTAuthenticationRegexp = regexp.MustCompile(GWTAuthRegex)
+
 type Client struct {
 	HTTPClient *http.Client
 	Nonce      string
+	UserID     string
 }
 
 func NewClient() *Client {
@@ -59,65 +69,6 @@ func NewClient() *Client {
 			Jar: cookieJar,
 		},
 	}
-}
-
-// Login retrieves a new Anit CSRF value and logs into the API. Upon login success error is nil.
-func (c *Client) Login(ctx context.Context, username string, password string) error {
-	// Retrieving AntiCSRF from the login form.
-	antiCSRF, err := c.RetrieveAntiCSRF(ctx)
-	if err != nil {
-		return fmt.Errorf("failed while retreiving Anti CSRF for login: %s", err)
-	}
-
-	// Building url encoded values for login request.
-	formData := url.Values{}
-	formData.Set("anticsrf", antiCSRF)
-	formData.Set("password", password)
-	formData.Set("username", username)
-
-	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "POST", APIPathLogin, strings.NewReader(formData.Encode()))
-	if err != nil {
-		return fmt.Errorf("failed while building http request for login: %s", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Executing the request.
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed while executing http request for login: %s", err)
-	}
-	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
-
-	// Handling the response.
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read body of login response: %s", err)
-	}
-
-	var loginResponse LoginResponse
-	if err = json.Unmarshal(body, &loginResponse); err != nil {
-		return fmt.Errorf("failed to unmarshal login response json: %s", err)
-	}
-
-	if loginResponse.Error != "" {
-		return fmt.Errorf("failed to login: %s", loginResponse.Error)
-	}
-
-	// Storing the nonse from provided cookies.
-	cookies := resp.Cookies()
-	for _, cookie := range cookies {
-		if cookie.Name == "sesnonce" {
-			c.Nonce = cookie.Value
-		}
-	}
-
-	return nil
 }
 
 // RetrieveAntiCSRF retrieves an Anti CSRF value needed for login. The only method to obtain this value is via the login
@@ -179,12 +130,120 @@ func (c *Client) RetrieveAntiCSRF(ctx context.Context) (string, error) {
 	return csrf, nil
 }
 
+// Login retrieves a new Anit CSRF value and logs into the API. Upon login success error is nil.
+func (c *Client) Login(ctx context.Context, username string, password string) error {
+	// Retrieving AntiCSRF from the login form.
+	antiCSRF, err := c.RetrieveAntiCSRF(ctx)
+	if err != nil {
+		return fmt.Errorf("failed while retreiving Anti CSRF for login: %s", err)
+	}
+
+	// Building url encoded values for login request.
+	formData := url.Values{}
+	formData.Set("anticsrf", antiCSRF)
+	formData.Set("password", password)
+	formData.Set("username", username)
+
+	// Building the request.
+	req, err := http.NewRequestWithContext(ctx, "POST", APIPathLogin, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed while building http request for login: %s", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Executing the request.
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed while executing http request for login: %s", err)
+	}
+	//noinspection GoUnhandledErrorResult
+	defer resp.Body.Close()
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read body of login response: %s", err)
+	}
+
+	var loginResponse LoginResponse
+	if err = json.Unmarshal(body, &loginResponse); err != nil {
+		return fmt.Errorf("failed to unmarshal login response json: %s", err)
+	}
+
+	if loginResponse.Error != "" {
+		return fmt.Errorf("failed to login: %s", loginResponse.Error)
+	}
+
+	// Storing the nonse from provided cookies.
+	cookies := resp.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == "sesnonce" {
+			c.Nonce = cookie.Value
+		}
+	}
+
+	// Authenticating with GWT.
+	err = c.AuthenticateGWT(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate with GWT: %s", err)
+	}
+
+	return nil
+}
+
+// AuthenticateGWT essentially logs into the GWT api pulling UserID and a new nonce.
+func (c *Client) AuthenticateGWT(ctx context.Context) error {
+	// Building the request.
+	reqBody := fmt.Sprintf(GWTRPCGWTAuthenticate, c.Nonce)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
+	if err != nil {
+		return fmt.Errorf("failed while building http request for gwt authentication: %s", err)
+	}
+	req.Header.Set("content-type", GWTContentType)
+	req.Header.Add("x-gwt-module-base", GWTModuleBase)
+	req.Header.Add("x-gwt-permutation", GWTPermutation)
+
+	// Executing the request.
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed while executing http request for gwt authentication: %s", err)
+	}
+	//noinspection GoUnhandledErrorResult
+	defer resp.Body.Close()
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("received non 200 response of %d for gwt token generation", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read body of gwt token authentication: %s", err)
+	}
+
+	match := GWTAuthenticationRegexp.FindStringSubmatch(string(body))
+
+	if len(match) != 3 {
+		return fmt.Errorf("failed to find token in response data, expected 2 matches but received %d", len(match))
+	}
+
+	c.UserID = match[1]
+	c.Nonce = match[2]
+
+	return nil
+}
+
 // GenerateAuthToken requests an authentication token from the API. This token is used to request the generation of
 // a "token" that is provided as a nonce to the export API calls.
 func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 
 	// Building the request.
-	reqBody := fmt.Sprintf(GWTRPCGenerateAuthorizationToken, c.Nonce)
+	reqBody := fmt.Sprintf(GWTRPCGenerateAuthorizationToken, c.Nonce, c.UserID)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
 	if err != nil {
