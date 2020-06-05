@@ -113,7 +113,7 @@ func TestExportDailyNutrition(t *testing.T) {
 
 	_, err = c.ExportDailyNutrition(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
 	if err != nil {
-		t.Fatalf("failed to retrieve servings: %s", err)
+		t.Fatalf("failed to retrieve daily nutrition: %s", err)
 	}
 }
 
@@ -189,5 +189,50 @@ func TestExportNotes(t *testing.T) {
 	_, err = c.ExportNotes(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("failed to retrieve servings: %s", err)
+	}
+}
+
+func TestFull(t *testing.T) {
+	username := os.Getenv("GOCRONOMETER_TEST_USERNAME")
+	password := os.Getenv("GOCRONOMETER_TEST_PASSWORD")
+
+	if username == "" {
+		t.Fatalf("username is empty, is GOCRONOMETER_TEST_USERNAME set?")
+	}
+
+	if password == "" {
+		t.Fatalf("password is empty, is GOCRONOMETER_TEST_PASSWORD set?")
+	}
+
+	c := gocronometer.NewClient()
+
+	err := c.Login(context.Background(), username, password)
+	if err != nil {
+		t.Fatalf("failed to login with valid creds: %s", err)
+	}
+
+	_, err = c.ExportDailyNutrition(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("failed to retrieve servings: %s", err)
+	}
+
+	_, err = c.ExportServings(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("failed to retrieve servings: %s", err)
+	}
+
+	_, err = c.ExportExercises(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("failed to retrieve exercises: %s", err)
+	}
+
+	_, err = c.ExportBiometrics(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("failed to retrieve biometrics: %s", err)
+	}
+
+	_, err = c.ExportNotes(context.Background(), time.Date(2020, 06, 01, 0, 0, 0, 0, time.UTC), time.Date(2020, 06, 04, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("failed to retrieve notes: %s", err)
 	}
 }
