@@ -36,6 +36,12 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to login with valid creds: %s", err)
 	}
+
+	err = c.Logout(context.Background())
+	if err != nil {
+		t.Fatalf("failed to log out after login: %s", err)
+	}
+
 }
 
 func TestAuthTokenGeneration(t *testing.T) {

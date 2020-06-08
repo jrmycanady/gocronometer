@@ -45,9 +45,10 @@ const (
 	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
 
 	// GWTRPCGWTAuthenticate authenticates with the GWT API.
-	GWTRPCGWTAuthenticate = "" +
-		"" +
-		"7|0|7|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
+	GWTRPCGWTAuthenticate = "7|0|7|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
+
+	// GWTRPCGWTLogout logs out from GWT.
+	GWTRPCLogout = "7|0|6|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|logout|java.lang.String/2004016611|%s|1|2|3|4|1|5|6|"
 )
 
 var GWTTokenRegex = regexp.MustCompile("\"(?P<token>.*)\"")
@@ -313,14 +314,14 @@ func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, 
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	// Handling the response.
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("received non 200 response of %d for daily nutrition export", resp.StatusCode)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of daily nutrition export response: %s", err)
+	}
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("received non 200 response of %d for daily nutrition export: body %s", resp.StatusCode, string(body))
 	}
 
 	return string(body), nil
@@ -360,14 +361,14 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	// Handling the response.
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("received non 200 response of %d for servings export", resp.StatusCode)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of servings export response: %s", err)
+	}
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("received non 200 response of %d for servings export: body [%s]", resp.StatusCode, string(body))
 	}
 
 	return string(body), nil
@@ -407,14 +408,14 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	// Handling the response.
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("received non 200 response of %d for exercises export", resp.StatusCode)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of exercises export response: %s", err)
+	}
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("received non 200 response of %d for exercises export: body %s", resp.StatusCode, string(body))
 	}
 
 	return string(body), nil
@@ -510,4 +511,33 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 	}
 
 	return string(body), nil
+}
+
+// Logout logs out from the API.
+func (c *Client) Logout(ctx context.Context) error {
+	// Building the request.
+	reqBody := fmt.Sprintf(GWTRPCLogout, c.Nonce)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
+	if err != nil {
+		return fmt.Errorf("failed while building http request for gwt authentication: %s", err)
+	}
+	req.Header.Set("content-type", GWTContentType)
+	req.Header.Add("x-gwt-module-base", GWTModuleBase)
+	req.Header.Add("x-gwt-permutation", GWTPermutation)
+
+	// Executing the request.
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed while executing http request for gwt logout: %s", err)
+	}
+	//noinspection GoUnhandledErrorResult
+	defer resp.Body.Close()
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("received non 200 response of %d for gwt logout", resp.StatusCode)
+	}
+
+	return nil
 }
