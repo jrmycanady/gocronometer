@@ -33,7 +33,8 @@ const (
 const (
 	GWTContentType = "text/x-gwt-rpc; charset=UTF-8"
 	GWTModuleBase  = "https://cronometer.com/cronometer/"
-	GWTPermutation = "9D62616AE775E1F90E83CD7804DC7AFE"
+	//GWTPermutation = "9D62616AE775E1F90E83CD7804DC7AFE"
+	GWTPermutation = "7B121DC5483BF272B1BC1916DA9FA963"
 )
 
 // These constants are the RPC body for the various GWT calls. It's expected that these may change out form under us.
@@ -42,13 +43,12 @@ const (
 	// it as a nonce to the export calls.
 	// Need to provide fmt.Sprintf() a nonce string to insert into the call as well as the UserID. The nonce appears to
 	// really be used as a session for GWT calls...
-	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
+	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|280B5145BF76838AE605B5DE02D74840|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
 
 	// GWTRPCGWTAuthenticate authenticates with the GWT API.
-	GWTRPCGWTAuthenticate = "7|0|7|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
-
+	GWTRPCGWTAuthenticate = "7|0|7|https://cronometer.com/cronometer/|280B5145BF76838AE605B5DE02D74840|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
 	// GWTRPCGWTLogout logs out from GWT.
-	GWTRPCLogout = "7|0|6|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|logout|java.lang.String/2004016611|%s|1|2|3|4|1|5|6|"
+	GWTRPCLogout = "7|0|6|https://cronometer.com/cronometer/|280B5145BF76838AE605B5DE02D74840|com.cronometer.client.CronometerService|logout|java.lang.String/2004016611|%s|1|2|3|4|1|5|6|"
 )
 
 var GWTTokenRegex = regexp.MustCompile("\"(?P<token>.*)\"")
@@ -228,6 +228,9 @@ func (c *Client) AuthenticateGWT(ctx context.Context) error {
 	}
 
 	match := GWTAuthenticationRegexp.FindStringSubmatch(string(body))
+
+	cookies := resp.Cookies()
+	fmt.Println(cookies)
 
 	if len(match) != 3 {
 		return fmt.Errorf("failed to find token in response data, expected 2 matches but received %d", len(match))
