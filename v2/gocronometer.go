@@ -2,10 +2,14 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"golang.org/x/net/html"
+	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
+	"strings"
 )
 
 const (
@@ -132,4 +136,72 @@ func (c *Client) ObtainAntiCSRF(ctx context.Context) (string, error) {
 	}
 
 	return csrf, nil
+}
+
+type LoginResponse struct {
+	Redirect string `json:"redirect"`
+	Success  bool   `json:"success"`
+	Error    string `json:"error"`
+}
+
+// Login logs into the Cronometer and the GWT API. Nil is returned on login success.
+func (c *Client) Login(ctx context.Context, username string, password string) error {
+	// Obtaining a new anticsrf from the login page.
+	antiCSRF, err := c.ObtainAntiCSRF(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve anit CSRF: %s", err)
+	}
+
+	// Building login request.
+	formData := url.Values{}
+	formData.Set("anticsrf", antiCSRF)
+	formData.Set("password", password)
+	formData.Set("username", username)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", APILoginURL, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed while building http request for login: %s", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed while executing http request for login: %s", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read body of login response: %s", err)
+	}
+
+	var loginResponse LoginResponse
+	if err = json.Unmarshal(body, &loginResponse); err != nil {
+		return fmt.Errorf("failed to unmarshal login response json: %s", err)
+	}
+
+	if loginResponse.Error != "" {
+		return fmt.Errorf("failed to login: %s", loginResponse.Error)
+	}
+
+	// Storing the nonse from provided cookies.
+	cookies := resp.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == "sesnonce" {
+			c.Nonce = cookie.Value
+		}
+	}
+
+	//// Authenticating with GWT.
+	//err = c.AuthenticateGWT(ctx)
+	//if err != nil {
+	//	return fmt.Errorf("failed to authenticate with GWT: %s", err)
+	//}
+
+	return nil
+
 }

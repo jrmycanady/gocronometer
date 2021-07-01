@@ -39,3 +39,25 @@ func TestClient_ObtainAntiCSRF(t *testing.T) {
 		t.Fatalf("the anticsrf value was found to be empty")
 	}
 }
+
+func TestClient_Login(t *testing.T) {
+	username, password, client, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.Login(context.Background(), username, password); err != nil {
+		t.Fatalf("failed to login: %s", err)
+	}
+}
+
+func TestClient_Login_BadCreds(t *testing.T) {
+	username, _, client, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.Login(context.Background(), username, "BAD"); err == nil {
+		t.Fatalf("logged in with bad credentials")
+	}
+}
