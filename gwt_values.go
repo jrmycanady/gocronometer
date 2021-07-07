@@ -1,4 +1,4 @@
-package v2
+package gocronometer
 
 // The following constants contain header values required for GWT requests. These values are found by inspecting a
 // request from the web app. When the web app is updated these values can change. The values provided here are the
@@ -10,7 +10,7 @@ const (
 
 	// GWTHeader is what appears to be a hash value that is provided at the beginning of every GWT request. As it
 	// changes with app updates it appears to be related to validating the version the requester is expecting.
-	GWTHeader = "280B5145BF76838AE605B5DE02D74840"
+	GWTHeader = "3B6C5196158464C5643BA376AF05E7F1"
 )
 
 // The following are the GWT procedure calls as found from inspection of the app.
