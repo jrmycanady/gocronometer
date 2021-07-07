@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/net/html"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -15,80 +16,112 @@ import (
 )
 
 const (
-	// HTMLPathLogin is the full path for the login page.
-	HTMLPathLogin = "https://cronometer.com/login/"
+	// HTMLLoginURL is the full URL to the Cronometer login page.
+	HTMLLoginURL = "https://cronometer.com/login/"
 
-	// APIPathLogin is the full path to the login API resource.
-	APIPathLogin = "https://cronometer.com/login"
+	// APILoginURL is the full URL for login requests.
+	APILoginURL = "https://cronometer.com/login"
 
-	// APIGWTPath is the full path for GWT RPC calls.
-	APIGWTPath = "https://cronometer.com/cronometer/app"
+	// GWTBaseURL is the full URL for accessing the GWT API.
+	GWTBaseURL = "https://cronometer.com/cronometer/app"
 
-	// APIPathExport is the full path for requesting exports.
-	APIPathExport = "https://cronometer.com/export"
-)
-
-// These constants are considered "magic" values that allow GWT requests to process. The minimum amount of effort was
-// put forth to get the GWT calls to work and it's expected some of these values will change with time.
-const (
-	GWTContentType = "text/x-gwt-rpc; charset=UTF-8"
-	GWTModuleBase  = "https://cronometer.com/cronometer/"
-	GWTPermutation = "9D62616AE775E1F90E83CD7804DC7AFE"
-)
-
-// These constants are the RPC body for the various GWT calls. It's expected that these may change out form under us.
-const (
-	// GWTRPCGenerateAuthorizationToken generates an authorization token. The only use known at this point is to provide
-	// it as a nonce to the export calls.
-	// Need to provide fmt.Sprintf() a nonce string to insert into the call as well as the UserID. The nonce appears to
-	// really be used as a session for GWT calls...
-	GWTRPCGenerateAuthorizationToken = "7|0|8|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3692935123|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
-
-	// GWTRPCGWTAuthenticate authenticates with the GWT API.
-	GWTRPCGWTAuthenticate = "7|0|7|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|authenticate|java.lang.String/2004016611|I|%s|1|2|3|4|2|5|6|7|-300|"
-
-	// GWTRPCGWTLogout logs out from GWT.
-	GWTRPCLogout = "7|0|6|https://cronometer.com/cronometer/|5BCB62A9B6F57CF6161F9EE3C6B77CD2|com.cronometer.client.CronometerService|logout|java.lang.String/2004016611|%s|1|2|3|4|1|5|6|"
+	// APIExportURL is the full URL for requesting data exports.
+	APIExportURL = "https://cronometer.com/export"
 )
 
 var GWTTokenRegex = regexp.MustCompile("\"(?P<token>.*)\"")
 
-const GWTAuthRegex = `//OK\[(?P<userid>\d*),.*"(?P<nonce>[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})`
+const GWTAuthRegex = `OK\[(?P<userid>\d*),.*`
 
 var GWTAuthenticationRegexp = regexp.MustCompile(GWTAuthRegex)
 
+// Client represents a client to the Cronometer API. The zero value is not a valid configuration. A new client should
+// be generated with the NewClient function.
 type Client struct {
 	HTTPClient *http.Client
 	Nonce      string
 	UserID     string
+
+	GWTContentType string
+	GWTModuleBase  string
+	GWTPermutation string
+	GWTHeader      string
 }
 
-func NewClient() *Client {
-	cookieJar, _ := cookiejar.New(nil)
-	return &Client{
-		HTTPClient: &http.Client{
-			Jar: cookieJar,
-		},
+// ClientOptions represents the options that can be provided to the client. Zero values revert to the library defaults.
+type ClientOptions struct {
+	GWTContentType string
+	GWTModuleBase  string
+	GWTPermutation string
+	GWTHeader      string
+}
+
+// updateOpts updates the client with the opts provided
+func (c *Client) updateOpts(opts *ClientOptions) {
+	// A nil opt is the same as a zero value opt.
+	if opts == nil {
+		opts = &ClientOptions{}
+	}
+
+	if opts.GWTContentType != "" {
+		c.GWTContentType = opts.GWTContentType
+	}
+	if opts.GWTModuleBase != "" {
+		c.GWTModuleBase = opts.GWTModuleBase
+	}
+	if opts.GWTPermutation != "" {
+		c.GWTPermutation = opts.GWTPermutation
+	}
+	if opts.GWTHeader != "" {
+		c.GWTHeader = opts.GWTHeader
 	}
 }
 
-// RetrieveAntiCSRF retrieves an Anti CSRF value needed for login. The only method to obtain this value is via the login
-// form at https://cronometer.com/login/. An HTTP request is performed and the HTML page parsed to obtain the value.
-func (c *Client) RetrieveAntiCSRF(ctx context.Context) (string, error) {
+// NewClient generates a new client for the Cronometer API. If opts is nil the default values are utilized.
+func NewClient(opts *ClientOptions) *Client {
+	jar, _ := cookiejar.New(nil)
+	client := &Client{
+		HTTPClient: &http.Client{
+			Jar: jar,
+		},
+		GWTContentType: GWTContentType,
+		GWTModuleBase:  GWTModuleBase,
+		GWTPermutation: GWTPermutation,
+	}
 
-	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", HTMLPathLogin, nil)
+	client.updateOpts(opts)
+
+	return client
+}
+
+// NewGWTRequestWithContext creates a new http request with the proper headers for a GWT request.
+func (c *Client) NewGWTRequestWithContext(ctx context.Context, method string, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("content-type", c.GWTContentType)
+	req.Header.Add("x-gwt-module-base", c.GWTModuleBase)
+	req.Header.Add("x-gwt-permutation", c.GWTPermutation)
+
+	return req, nil
+}
+
+// ObtainAntiCSRF connects to the login page of Cronometer and parses out the anticsrf value from the HTML form.
+func (c *Client) ObtainAntiCSRF(ctx context.Context) (string, error) {
+
+	// Building and executing request to obtain the login page HTML.
+	req, err := http.NewRequestWithContext(ctx, "GET", HTMLLoginURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to build request to retreive anticsrf value: %s", err)
 	}
 	req = req.WithContext(ctx)
 
-	// Executing request.
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed issuing HTTP request: %s", err)
 	}
-	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
@@ -131,36 +164,38 @@ func (c *Client) RetrieveAntiCSRF(ctx context.Context) (string, error) {
 	return csrf, nil
 }
 
-// Login retrieves a new Anit CSRF value and logs into the API. Upon login success error is nil.
+type LoginResponse struct {
+	Redirect string `json:"redirect"`
+	Success  bool   `json:"success"`
+	Error    string `json:"error"`
+}
+
+// Login logs into the Cronometer and the GWT API. Nil is returned on login success.
 func (c *Client) Login(ctx context.Context, username string, password string) error {
-	// Retrieving AntiCSRF from the login form.
-	antiCSRF, err := c.RetrieveAntiCSRF(ctx)
+	// Obtaining a new anticsrf from the login page.
+	antiCSRF, err := c.ObtainAntiCSRF(ctx)
 	if err != nil {
-		return fmt.Errorf("failed while retreiving Anti CSRF for login: %s", err)
+		return fmt.Errorf("failed to retrieve anit CSRF: %s", err)
 	}
 
-	// Building url encoded values for login request.
+	// Building login request.
 	formData := url.Values{}
 	formData.Set("anticsrf", antiCSRF)
 	formData.Set("password", password)
 	formData.Set("username", username)
 
-	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "POST", APIPathLogin, strings.NewReader(formData.Encode()))
+	req, err := http.NewRequestWithContext(ctx, "POST", APILoginURL, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed while building http request for login: %s", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	// Executing the request.
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed while executing http request for login: %s", err)
 	}
-	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
-	// Handling the response.
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
 	}
@@ -180,15 +215,10 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 	}
 
 	// Storing the nonse from provided cookies.
-	cookies := resp.Cookies()
-	for _, cookie := range cookies {
-		if cookie.Name == "sesnonce" {
-			c.Nonce = cookie.Value
-		}
-	}
+	c.updateSesnonce(resp)
 
 	// Authenticating with GWT.
-	err = c.AuthenticateGWT(ctx)
+	err = c.GWTAuthenticate(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate with GWT: %s", err)
 	}
@@ -196,31 +226,72 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 	return nil
 }
 
-// AuthenticateGWT essentially logs into the GWT api pulling UserID and a new nonce.
-func (c *Client) AuthenticateGWT(ctx context.Context) error {
-	// Building the request.
-	reqBody := fmt.Sprintf(GWTRPCGWTAuthenticate, c.Nonce)
+func (c *Client) updateSesnonce(resp *http.Response) {
+	if resp == nil {
+		return
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
+	cookies := resp.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == "sesnonce" {
+			c.Nonce = cookie.Value
+		}
+	}
+}
+
+// Logout logs out from the API.
+func (c *Client) Logout(ctx context.Context) error {
+	// Building the request.
+	reqBody := fmt.Sprintf(GWTLogout, c.Nonce)
+
+	req, err := c.NewGWTRequestWithContext(ctx, "POST", GWTBaseURL, strings.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("failed while building http request for gwt authentication: %s", err)
 	}
-	req.Header.Set("content-type", GWTContentType)
-	req.Header.Add("x-gwt-module-base", GWTModuleBase)
-	req.Header.Add("x-gwt-permutation", GWTPermutation)
 
 	// Executing the request.
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed while executing http request for gwt authentication: %s", err)
+		return fmt.Errorf("failed while executing http request for gwt logout: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
 	defer resp.Body.Close()
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
+		return fmt.Errorf("received non 200 response of %d for gwt logout", resp.StatusCode)
+	}
+
+	c.UserID = ""
+	c.Nonce = ""
+
+	return nil
+}
+
+// GWTAuthenticate will authenticate with the GWT API using the sesonce of the client. Login() calls this by default so
+// in most cases this should never be called directly.
+func (c *Client) GWTAuthenticate(ctx context.Context) error {
+	// Building and sending the request.
+	//reqBody := fmt.Sprintf(GWTAuthenticate, c.Nonce)
+
+	req, err := c.NewGWTRequestWithContext(ctx, "POST", GWTBaseURL, strings.NewReader(GWTAuthenticate))
+	if err != nil {
+		return fmt.Errorf("failed while building http request for gwt authentication: %s", err)
+	}
+
+	// Executing the request.
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed while executing http request for gwt authentication: %s", err)
+	}
+	defer resp.Body.Close()
+
+	// Handling the response.
+	if resp.StatusCode != 200 {
 		return fmt.Errorf("received non 200 response of %d for gwt token generation", resp.StatusCode)
 	}
+
+	c.updateSesnonce(resp)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -229,12 +300,11 @@ func (c *Client) AuthenticateGWT(ctx context.Context) error {
 
 	match := GWTAuthenticationRegexp.FindStringSubmatch(string(body))
 
-	if len(match) != 3 {
-		return fmt.Errorf("failed to find token in response data, expected 2 matches but received %d", len(match))
+	if len(match) != 2 {
+		return fmt.Errorf("failed to find GWT Authentication token in response data, expected 2 matches but received %d", len(match))
 	}
 
 	c.UserID = match[1]
-	c.Nonce = match[2]
 
 	return nil
 }
@@ -244,15 +314,12 @@ func (c *Client) AuthenticateGWT(ctx context.Context) error {
 func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 
 	// Building the request.
-	reqBody := fmt.Sprintf(GWTRPCGenerateAuthorizationToken, c.Nonce, c.UserID)
+	reqBody := fmt.Sprintf(GWTGenerateAuthToken, c.Nonce, c.UserID)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
+	req, err := c.NewGWTRequestWithContext(ctx, "POST", GWTBaseURL, strings.NewReader(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for gwt token generation: %s", err)
 	}
-	req.Header.Set("content-type", GWTContentType)
-	req.Header.Add("x-gwt-module-base", GWTModuleBase)
-	req.Header.Add("x-gwt-permutation", GWTPermutation)
 
 	// Executing the request.
 	resp, err := c.HTTPClient.Do(req)
@@ -291,13 +358,10 @@ func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, 
 	}
 
 	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", APIPathExport, nil)
+	req, err := c.NewExportRequest(ctx, "GET", APIExportURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for daily nutrition export: %s", err)
 	}
-	req.Header.Set("sec-fetch-dest", "document")
-	req.Header.Add("sec-fetch-mode", "navigate")
-	req.Header.Add("sec-fetch-site", "same-origin")
 
 	q := req.URL.Query()
 	q.Add("nonce", token)
@@ -338,13 +402,10 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 	}
 
 	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", APIPathExport, nil)
+	req, err := c.NewExportRequest(ctx, "GET", APIExportURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for servings export: %s", err)
 	}
-	req.Header.Set("sec-fetch-dest", "document")
-	req.Header.Add("sec-fetch-mode", "navigate")
-	req.Header.Add("sec-fetch-site", "same-origin")
 
 	q := req.URL.Query()
 	q.Add("nonce", token)
@@ -385,13 +446,10 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	}
 
 	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", APIPathExport, nil)
+	req, err := c.NewExportRequest(ctx, "GET", APIExportURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for exercises export: %s", err)
 	}
-	req.Header.Set("sec-fetch-dest", "document")
-	req.Header.Add("sec-fetch-mode", "navigate")
-	req.Header.Add("sec-fetch-site", "same-origin")
 
 	q := req.URL.Query()
 	q.Add("nonce", token)
@@ -421,6 +479,20 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	return string(body), nil
 }
 
+// NewExportRequest creates a new http request for exports.
+func (c *Client) NewExportRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("sec-fetch-dest", "document")
+	req.Header.Add("sec-fetch-mode", "navigate")
+	req.Header.Add("sec-fetch-site", "same-origin")
+
+	return req, nil
+}
+
 // ExportBiometrics exports the biometrics within the date range. Only the YYYY-mm-dd is utilized of startDate and
 // endDate. The export is the raw string data.
 func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endDate time.Time) (string, error) {
@@ -431,13 +503,10 @@ func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endD
 	}
 
 	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", APIPathExport, nil)
+	req, err := c.NewExportRequest(ctx, "GET", APIExportURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for biometrics export: %s", err)
 	}
-	req.Header.Set("sec-fetch-dest", "document")
-	req.Header.Add("sec-fetch-mode", "navigate")
-	req.Header.Add("sec-fetch-site", "same-origin")
 
 	q := req.URL.Query()
 	q.Add("nonce", token)
@@ -477,13 +546,10 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 	}
 
 	// Building the request.
-	req, err := http.NewRequestWithContext(ctx, "GET", APIPathExport, nil)
+	req, err := c.NewExportRequest(ctx, "GET", APIExportURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed while building http request for notes export: %s", err)
 	}
-	req.Header.Set("sec-fetch-dest", "document")
-	req.Header.Add("sec-fetch-mode", "navigate")
-	req.Header.Add("sec-fetch-site", "same-origin")
 
 	q := req.URL.Query()
 	q.Add("nonce", token)
@@ -511,33 +577,4 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 	}
 
 	return string(body), nil
-}
-
-// Logout logs out from the API.
-func (c *Client) Logout(ctx context.Context) error {
-	// Building the request.
-	reqBody := fmt.Sprintf(GWTRPCLogout, c.Nonce)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", APIGWTPath, strings.NewReader(reqBody))
-	if err != nil {
-		return fmt.Errorf("failed while building http request for gwt authentication: %s", err)
-	}
-	req.Header.Set("content-type", GWTContentType)
-	req.Header.Add("x-gwt-module-base", GWTModuleBase)
-	req.Header.Add("x-gwt-permutation", GWTPermutation)
-
-	// Executing the request.
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed while executing http request for gwt logout: %s", err)
-	}
-	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
-
-	// Handling the response.
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received non 200 response of %d for gwt logout", resp.StatusCode)
-	}
-
-	return nil
 }
