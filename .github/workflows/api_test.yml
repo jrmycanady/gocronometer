@@ -28,5 +28,5 @@ jobs:
       env:
         GOCRONOMETER_TEST_USERNAME: ${{ secrets.GOCRONOMETER_TEST_USERNAME }}
         GOCRONOMETER_TEST_PASSWORD: ${{ secrets.GOCRONOMETER_TEST_PASSWORD }}
-      run: go test -v -run TestFull
+      run: go test -v -run TestClient_ExportExercises
 
