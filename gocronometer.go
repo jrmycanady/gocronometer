@@ -578,3 +578,19 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 
 	return string(body), nil
 }
+
+// ExportServingsParsed exports the servings within the date range and parses them into a go struct. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is the raw string data.
+func (c *Client) ExportServingsParsed(ctx context.Context, startDate time.Time, endDate time.Time) (ServingRecords, error) {
+	raw, err := c.ExportServings(ctx, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("retreiving raw data: %s", err)
+	}
+
+	servings, err := ParseServingsExport(strings.NewReader(raw))
+	if err != nil {
+		return nil, fmt.Errorf("parsing raw data: %s", err)
+	}
+
+	return servings, nil
+}

@@ -198,3 +198,25 @@ func TestClient_ExportExercises(t *testing.T) {
 		t.Fatalf("failed to export bio: %s", err)
 	}
 }
+
+func TestClient_ExportServingsParsed(t *testing.T) {
+	username, password, client, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.Login(context.Background(), username, password); err != nil {
+		t.Fatalf("failed to login: %s", err)
+	}
+
+	defer client.Logout(context.Background())
+
+	startTime := time.Date(2021, 6, 1, 0, 0, 0, 0, time.Local)
+	endTime := time.Date(2021, 6, 10, 0, 0, 0, 0, time.Local)
+
+	_, err = client.ExportServingsParsed(context.Background(), startTime, endTime)
+	if err != nil {
+		t.Fatalf("failed to export bio: %s", err)
+	}
+
+}
