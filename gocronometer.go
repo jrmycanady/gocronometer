@@ -122,7 +122,7 @@ func (c *Client) ObtainAntiCSRF(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed issuing HTTP request: %s", err)
 	}
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != http.StatusOK {
@@ -194,7 +194,7 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 	if err != nil {
 		return fmt.Errorf("failed while executing http request for login: %s", err)
 	}
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
@@ -214,7 +214,7 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 		return fmt.Errorf("failed to login: %s", loginResponse.Error)
 	}
 
-	// Storing the nonse from provided cookies.
+	// Storing the nonce from provided cookies.
 	c.updateSesnonce(resp)
 
 	// Authenticating with GWT.
@@ -255,7 +255,7 @@ func (c *Client) Logout(ctx context.Context) error {
 		return fmt.Errorf("failed while executing http request for gwt logout: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
@@ -268,7 +268,7 @@ func (c *Client) Logout(ctx context.Context) error {
 	return nil
 }
 
-// GWTAuthenticate will authenticate with the GWT API using the sesonce of the client. Login() calls this by default so
+// GWTAuthenticate will authenticate with the GWT API using the sesnonce of the client. Login() calls this by default so
 // in most cases this should never be called directly.
 func (c *Client) GWTAuthenticate(ctx context.Context) error {
 	// Building and sending the request.
@@ -284,7 +284,7 @@ func (c *Client) GWTAuthenticate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed while executing http request for gwt authentication: %s", err)
 	}
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
@@ -327,7 +327,7 @@ func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed while executing http request for gwt token generation: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
@@ -376,7 +376,7 @@ func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, 
 		return "", fmt.Errorf("failed while executing http request for daily nutrition export: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -420,7 +420,7 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 		return "", fmt.Errorf("failed while executing http request for servings export: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -464,7 +464,7 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 		return "", fmt.Errorf("failed while executing http request for exercises export: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -521,7 +521,7 @@ func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endD
 		return "", fmt.Errorf("failed while executing http request for biometrics export: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
@@ -564,7 +564,7 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 		return "", fmt.Errorf("failed while executing http request for notes export: %s", err)
 	}
 	//noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
+	defer closeAndExhaustReader(resp.Body)
 
 	// Handling the response.
 	if resp.StatusCode != 200 {
@@ -593,4 +593,16 @@ func (c *Client) ExportServingsParsed(ctx context.Context, startDate time.Time, 
 	}
 
 	return servings, nil
+}
+
+// closeAndExhaustReader will first try and exhaust r and then call close. Errors are intentionally ignored
+// as this is only to be called in with deferred and where the error would have no action to be taken.
+func closeAndExhaustReader(r io.ReadCloser) {
+	if _, err := io.Copy(io.Discard, r); err != nil {
+		// Do nothing.
+	}
+	if err := r.Close(); err != nil {
+		// Do nothing.
+	}
+	return
 }

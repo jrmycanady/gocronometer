@@ -20,10 +20,10 @@ const (
 	// The first parameter in the string should be the sesnonce and the second is the users ID.
 	GWTGenerateAuthToken = "7|0|8|https://cronometer.com/cronometer/|" + GWTHeader + "|com.cronometer.client.CronometerService|generateAuthorizationToken|java.lang.String/2004016611|I|com.cronometer.client.data.AuthScope/3337242207|%s|1|2|3|4|4|5|6|6|7|8|%s|3600|7|2|"
 
-	// GWTAuthenticate will authenticate with the GWT api. The sesonce should be set in the cookies.
+	// GWTAuthenticate will authenticate with the GWT api. The sesnonce should be set in the cookies.
 	GWTAuthenticate = "7|0|5|https://cronometer.com/cronometer/|" + GWTHeader + "|com.cronometer.client.CronometerService|authenticate|java.lang.Integer/3438268394|1|2|3|4|1|5|5|-300|"
 
 	// GWTLogout will log the session out.
-	// The only parameter should be the sesonce.
+	// The only parameter should be the sesnonce.
 	GWTLogout = "7|0|6|https://cronometer.com/cronometer/|" + GWTHeader + "|com.cronometer.client.CronometerService|logout|java.lang.String/2004016611|%s|1|2|3|4|1|5|6|"
 )

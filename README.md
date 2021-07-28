@@ -40,7 +40,7 @@ fmt.Println(rawCSVData)
 
 This library mimics the GWT HTTP requests to perform the export of data. The GWT API exposed by Cronometer is not 
 designed to be accessed from anything besides their deployed GWT application. For that reason, there are several values 
-that can only be obtained from loading the application itself. These values change over time with application updates
+that can only be obtained from loading the application itself. These values change over time with application updates,
 and the library must use those new values.
 
 The library includes the values as of the last push of the library. The new values can be provided to the client via

@@ -15,11 +15,11 @@ func setup() (username string, password string, client *gocronometer.Client, err
 	password = os.Getenv("GOCRONOMETER_TEST_PASSWORD_ME")
 
 	if username == "" {
-		return "", "", nil, fmt.Errorf("username is empty, is GOCRONOMETER_TEST_USERNAME set?")
+		return "", "", nil, fmt.Errorf("username is empty, is GOCRONOMETER_TEST_USERNAME set")
 	}
 
 	if password == "" {
-		return "", "", nil, fmt.Errorf("password is empty, is GOCRONOMETER_TEST_PASSWORD set?")
+		return "", "", nil, fmt.Errorf("password is empty, is GOCRONOMETER_TEST_PASSWORD set")
 	}
 
 	return username, password, gocronometer.NewClient(nil), nil

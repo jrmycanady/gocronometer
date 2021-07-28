@@ -70,7 +70,6 @@ type ServingRecord struct {
 	LysineG          float64
 	MethionineG      float64
 	PhenylalanineG   float64
-	ProteinG         float64
 	ThreonineG       float64
 	TryptophanG      float64
 	TyrosineG        float64
