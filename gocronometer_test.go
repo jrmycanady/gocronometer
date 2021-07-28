@@ -11,8 +11,8 @@ import (
 
 // setup perform some basic actions to setup testing.
 func setup() (username string, password string, client *gocronometer.Client, err error) {
-	username = os.Getenv("GOCRONOMETER_TEST_USERNAME_ME")
-	password = os.Getenv("GOCRONOMETER_TEST_PASSWORD_ME")
+	username = os.Getenv("GOCRONOMETER_TEST_USERNAME")
+	password = os.Getenv("GOCRONOMETER_TEST_PASSWORD")
 
 	if username == "" {
 		return "", "", nil, fmt.Errorf("username is empty, is GOCRONOMETER_TEST_USERNAME set")
