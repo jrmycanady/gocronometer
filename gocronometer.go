@@ -587,7 +587,23 @@ func (c *Client) ExportServingsParsed(ctx context.Context, startDate time.Time, 
 		return nil, fmt.Errorf("retreiving raw data: %s", err)
 	}
 
-	servings, err := ParseServingsExport(strings.NewReader(raw))
+	servings, err := ParseServingsExport(strings.NewReader(raw), time.UTC)
+	if err != nil {
+		return nil, fmt.Errorf("parsing raw data: %s", err)
+	}
+
+	return servings, nil
+}
+
+// ExportServingsParsedWithLocation is the same as ExportServingsParsed but sets the location of every recorded time
+// to the location provided.
+func (c *Client) ExportServingsParsedWithLocation(ctx context.Context, startDate time.Time, endDate time.Time, location *time.Location) (ServingRecords, error) {
+	raw, err := c.ExportServings(ctx, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("retreiving raw data: %s", err)
+	}
+
+	servings, err := ParseServingsExport(strings.NewReader(raw), location)
 	if err != nil {
 		return nil, fmt.Errorf("parsing raw data: %s", err)
 	}

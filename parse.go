@@ -83,7 +83,7 @@ type ServingsExport struct {
 	Records ServingRecords
 }
 
-func ParseServingsExport(rawCSVReader io.Reader) (ServingRecords, error) {
+func ParseServingsExport(rawCSVReader io.Reader, location *time.Location) (ServingRecords, error) {
 
 	r := csv.NewReader(rawCSVReader)
 
@@ -523,7 +523,11 @@ func ParseServingsExport(rawCSVReader io.Reader) (ServingRecords, error) {
 		if timeStr == "" {
 			timeStr = "00:00 AM"
 		}
-		serving.RecordedTime, err = time.Parse("2006-01-02 15:04 PM", date+" "+timeStr)
+
+		if location == nil {
+			location = time.UTC
+		}
+		serving.RecordedTime, err = time.ParseInLocation("2006-01-02 15:04 PM", date+" "+timeStr, location)
 		if err != nil {
 			return nil, fmt.Errorf("parsing record time: %s", err)
 		}
