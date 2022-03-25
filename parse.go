@@ -520,6 +520,9 @@ func ParseServingsExport(rawCSVReader io.Reader) (ServingRecords, error) {
 
 			}
 		}
+		if timeStr == "" {
+			timeStr = "00:00 AM"
+		}
 		serving.RecordedTime, err = time.Parse("2006-01-02 15:04 PM", date+" "+timeStr)
 		if err != nil {
 			return nil, fmt.Errorf("parsing record time: %s", err)
