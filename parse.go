@@ -547,3 +547,87 @@ func parseFloat(s string, bitSize int) (float64, error) {
 	}
 	return strconv.ParseFloat(s, bitSize)
 }
+
+type ExerciseRecord struct {
+	RecordedTime   time.Time
+	Exercise       string
+	Minutes        float64
+	CaloriesBurned float64
+}
+
+type ExerciseRecords []ExerciseRecord
+
+func ParseServingsExercises(rawCSVReader io.Reader, location *time.Location) (ExerciseRecords, error) {
+
+	r := csv.NewReader(rawCSVReader)
+
+	lineNum := 0
+	headers := make(map[int]string)
+	exercises := make(ExerciseRecords, 0, 0)
+
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// Index all the headers.
+		if lineNum == 0 {
+
+			for i, v := range record {
+				headers[i] = v
+			}
+			lineNum++
+			continue
+		}
+		lineNum++
+
+		var date string
+		var timeStr string
+		exercise := ExerciseRecord{}
+		for i, v := range record {
+			columnName := headers[i]
+
+			switch columnName {
+			case "Day":
+				date = v
+			case "Time":
+				timeStr = v
+			case "Exercise":
+				exercise.Exercise = v
+			case "Minutes":
+				f, err := parseFloat(v, 64)
+				if err != nil {
+					return nil, fmt.Errorf("parsing energy: %s", err)
+				}
+				exercise.Minutes = f
+
+			case "Calories Burned":
+				f, err := parseFloat(v, 64)
+				if err != nil {
+					return nil, fmt.Errorf("parsing caffeine: %s", err)
+				}
+				exercise.CaloriesBurned = f
+
+			}
+		}
+		if timeStr == "" {
+			timeStr = "00:00 AM"
+		}
+
+		if location == nil {
+			location = time.UTC
+		}
+		exercise.RecordedTime, err = time.ParseInLocation("2006-01-02 15:04 PM", date+" "+timeStr, location)
+		if err != nil {
+			return nil, fmt.Errorf("parsing record time: %s", err)
+		}
+		exercises = append(exercises, exercise)
+	}
+
+	return exercises, nil
+
+}

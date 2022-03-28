@@ -611,6 +611,22 @@ func (c *Client) ExportServingsParsedWithLocation(ctx context.Context, startDate
 	return servings, nil
 }
 
+// ExportExercisesParsedWithLocation exports the exercises within the date range and parses them into a go struct. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is parsed and dates set to the location provided.
+func (c *Client) ExportExercisesParsedWithLocation(ctx context.Context, startDate time.Time, endDate time.Time, location *time.Location) (ExerciseRecords, error) {
+	raw, err := c.ExportExercises(ctx, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("retreiving raw data: %s", err)
+	}
+
+	exercises, err := ParseServingsExercises(strings.NewReader(raw), location)
+	if err != nil {
+		return nil, fmt.Errorf("parsing raw data: %s", err)
+	}
+
+	return exercises, nil
+}
+
 // closeAndExhaustReader will first try and exhaust r and then call close. Errors are intentionally ignored
 // as this is only to be called in with deferred and where the error would have no action to be taken.
 func closeAndExhaustReader(r io.ReadCloser) {
