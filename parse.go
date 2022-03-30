@@ -685,12 +685,13 @@ func ParseBiometricRecordsExport(rawCSVReader io.Reader, location *time.Location
 			case "Unit":
 				bioRecord.Unit = v
 			case "Amount":
-				f, err := parseFloat(v, 64)
-				if err != nil {
-					return nil, fmt.Errorf("parsing energy: %s", err)
+				if !strings.Contains(v, "/") {
+					f, err := parseFloat(v, 64)
+					if err != nil {
+						return nil, fmt.Errorf("parsing energy: %s", err)
+					}
+					bioRecord.Amount = f
 				}
-				bioRecord.Amount = f
-
 			}
 		}
 		if timeStr == "" {
