@@ -619,7 +619,7 @@ func (c *Client) ExportExercisesParsedWithLocation(ctx context.Context, startDat
 		return nil, fmt.Errorf("retreiving raw data: %s", err)
 	}
 
-	exercises, err := ParseServingsExercises(strings.NewReader(raw), location)
+	exercises, err := ParseExerciseExport(strings.NewReader(raw), location)
 	if err != nil {
 		return nil, fmt.Errorf("parsing raw data: %s", err)
 	}
@@ -637,4 +637,20 @@ func closeAndExhaustReader(r io.ReadCloser) {
 		// Do nothing.
 	}
 	return
+}
+
+// ExportBiometricRecordsParsedWithLocation exports the biometric records within the date range and parses them into a go struct. Only the YYYY-mm-dd is utilized of startDate and
+// endDate. The export is parsed and dates set to the location provided.
+func (c *Client) ExportBiometricRecordsParsedWithLocation(ctx context.Context, startDate time.Time, endDate time.Time, location *time.Location) (BiometricRecords, error) {
+	raw, err := c.ExportBiometrics(ctx, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("retreiving raw data: %s", err)
+	}
+
+	exercises, err := ParseBiometricRecordsExport(strings.NewReader(raw), location)
+	if err != nil {
+		return nil, fmt.Errorf("parsing raw data: %s", err)
+	}
+
+	return exercises, nil
 }

@@ -557,7 +557,7 @@ type ExerciseRecord struct {
 
 type ExerciseRecords []ExerciseRecord
 
-func ParseServingsExercises(rawCSVReader io.Reader, location *time.Location) (ExerciseRecords, error) {
+func ParseExerciseExport(rawCSVReader io.Reader, location *time.Location) (ExerciseRecords, error) {
 
 	r := csv.NewReader(rawCSVReader)
 
@@ -629,5 +629,84 @@ func ParseServingsExercises(rawCSVReader io.Reader, location *time.Location) (Ex
 	}
 
 	return exercises, nil
+
+}
+
+type BiometricRecord struct {
+	RecordedTime time.Time
+	Metric       string
+	Unit         string
+	Amount       float64
+}
+
+type BiometricRecords []BiometricRecord
+
+func ParseBiometricRecordsExport(rawCSVReader io.Reader, location *time.Location) (BiometricRecords, error) {
+
+	r := csv.NewReader(rawCSVReader)
+
+	lineNum := 0
+	headers := make(map[int]string)
+	records := make(BiometricRecords, 0, 0)
+
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// Index all the headers.
+		if lineNum == 0 {
+
+			for i, v := range record {
+				headers[i] = v
+			}
+			lineNum++
+			continue
+		}
+		lineNum++
+
+		var date string
+		var timeStr string
+		bioRecord := BiometricRecord{}
+		for i, v := range record {
+			columnName := headers[i]
+
+			switch columnName {
+			case "Day":
+				date = v
+			case "Time":
+				timeStr = v
+			case "Metric":
+				bioRecord.Metric = v
+			case "Unit":
+				bioRecord.Unit = v
+			case "Amount":
+				f, err := parseFloat(v, 64)
+				if err != nil {
+					return nil, fmt.Errorf("parsing energy: %s", err)
+				}
+				bioRecord.Amount = f
+
+			}
+		}
+		if timeStr == "" {
+			timeStr = "00:00 AM"
+		}
+
+		if location == nil {
+			location = time.UTC
+		}
+		bioRecord.RecordedTime, err = time.ParseInLocation("2006-01-02 15:04 PM", date+" "+timeStr, location)
+		if err != nil {
+			return nil, fmt.Errorf("parsing record time: %s", err)
+		}
+		records = append(records, bioRecord)
+	}
+
+	return records, nil
 
 }
