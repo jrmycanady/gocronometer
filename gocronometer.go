@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/html"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"golang.org/x/net/html"
 )
 
 const (
@@ -200,7 +200,7 @@ func (c *Client) Login(ctx context.Context, username string, password string) er
 		return fmt.Errorf("received non 200 response of %d for login", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read body of login response: %s", err)
 	}
@@ -293,7 +293,7 @@ func (c *Client) GWTAuthenticate(ctx context.Context) error {
 
 	c.updateSesnonce(resp)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read body of gwt token authentication: %s", err)
 	}
@@ -334,7 +334,7 @@ func (c *Client) GenerateAuthToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("received non 200 response of %d for gwt token generation", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of gwt token generation response: %s", err)
 	}
@@ -378,7 +378,7 @@ func (c *Client) ExportDailyNutrition(ctx context.Context, startDate time.Time, 
 	//noinspection GoUnhandledErrorResult
 	defer closeAndExhaustReader(resp.Body)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of daily nutrition export response: %s", err)
 	}
@@ -422,7 +422,7 @@ func (c *Client) ExportServings(ctx context.Context, startDate time.Time, endDat
 	//noinspection GoUnhandledErrorResult
 	defer closeAndExhaustReader(resp.Body)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of servings export response: %s", err)
 	}
@@ -466,7 +466,7 @@ func (c *Client) ExportExercises(ctx context.Context, startDate time.Time, endDa
 	//noinspection GoUnhandledErrorResult
 	defer closeAndExhaustReader(resp.Body)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of exercises export response: %s", err)
 	}
@@ -528,7 +528,7 @@ func (c *Client) ExportBiometrics(ctx context.Context, startDate time.Time, endD
 		return "", fmt.Errorf("received non 200 response of %d for biometrics export", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of biometrics export response: %s", err)
 	}
@@ -571,7 +571,7 @@ func (c *Client) ExportNotes(ctx context.Context, startDate time.Time, endDate t
 		return "", fmt.Errorf("received non 200 response of %d for notes export", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body of notes export response: %s", err)
 	}
