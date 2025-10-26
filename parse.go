@@ -76,6 +76,7 @@ type ServingRecord struct {
 	ValineG          float64
 	ProtienG         float64
 	IronMg           float64
+	AlluloseG        float64
 	Category         string
 }
 
@@ -517,6 +518,12 @@ func ParseServingsExport(rawCSVReader io.Reader, location *time.Location) (Servi
 					return nil, fmt.Errorf("parsing vitiman c: %s", err)
 				}
 				serving.ValineG = f
+			case "Allulose (g)":
+				f, err := parseFloat(v, 64)
+				if err != nil {
+					return nil, fmt.Errorf("parsing Allulose: %s", err)
+				}
+				serving.AlluloseG = f
 			case "Category":
 				serving.Category = v
 
