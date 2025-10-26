@@ -561,7 +561,7 @@ func ParseServingsExport(rawCSVReader io.Reader, location *time.Location) (Servi
 
 }
 
-// parseFloat wraps time.ParseFloat but interprites an empty string as 0.
+// parseFloat wraps time.ParseFloat but interprets an empty string as 0.
 func parseFloat(s string, bitSize int) (float64, error) {
 	if s == "" {
 		return 0, nil
@@ -574,6 +574,7 @@ type ExerciseRecord struct {
 	Exercise       string
 	Minutes        float64
 	CaloriesBurned float64
+	Group          string
 }
 
 type ExerciseRecords []ExerciseRecord
@@ -625,14 +626,14 @@ func ParseExerciseExport(rawCSVReader io.Reader, location *time.Location) (Exerc
 					return nil, fmt.Errorf("parsing energy: %s", err)
 				}
 				exercise.Minutes = f
-
 			case "Calories Burned":
 				f, err := parseFloat(v, 64)
 				if err != nil {
 					return nil, fmt.Errorf("parsing caffeine: %s", err)
 				}
 				exercise.CaloriesBurned = f
-
+			case "Group":
+				exercise.Group = v
 			}
 		}
 		if timeStr == "" {
