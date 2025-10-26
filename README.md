@@ -28,13 +28,26 @@ fmt.Println(rawCSVData)
 
 ## Exports Supported
 
-|method|description|
-|------|-----------|
-|ExportDailyNutrition()|Exports daily nutrition information for the date range provided.|
-|ExportServings()|Exports servings for the date range provided.|
-|ExportExercises()|Exports exercises for the date range provided.|
-|ExportBiometrics()|Exports biometrics for the date range provided.|
-|ExportNotes(|Exports notes for the date range provided.|
+The following exports are supported. The standard output is the raw CSV data from the API. The data can be parsed
+using the helper parse functions.
+
+| func                   | description                                                      |
+|------------------------|------------------------------------------------------------------|
+| ExportDailyNutrition() | Exports daily nutrition information for the date range provided. |
+| ExportServings()       | Exports servings for the date range provided.                    |
+| ExportExercises()      | Exports exercises for the date range provided.                   |
+| ExportBiometrics()     | Exports biometrics for the date range provided.                  |
+| ExportNotes()          | Exports notes for the date range provided.                       |
+
+## Parsing Data
+
+The raw CSV data returned by the export functions can be parsed using the associated parse functions.
+
+| func                  | parsed data                            |
+|-----------------------|----------------------------------------|
+| ParseServingsExport() | ExportDailyNutrition(), ExportServings |
+| ParseExerciseExport() | ExportExercises()                      |
+| ParseBiometric()      | RecordsExport()                        |
 
 ## API Magic Values
 
