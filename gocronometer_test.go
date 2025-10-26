@@ -3,10 +3,11 @@ package gocronometer_test
 import (
 	"context"
 	"fmt"
-	"github.com/jrmycanady/gocronometer"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/jrmycanady/gocronometer"
 )
 
 // setup perform some basic actions to setup testing.
@@ -216,7 +217,29 @@ func TestClient_ExportServingsParsed(t *testing.T) {
 
 	_, err = client.ExportServingsParsed(context.Background(), startTime, endTime)
 	if err != nil {
-		t.Fatalf("failed to export bio: %s", err)
+		t.Fatalf("failed to export servings parsed: %s", err)
+	}
+
+}
+
+func TestClient_ExportDailyNutritionParsed(t *testing.T) {
+	username, password, client, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.Login(context.Background(), username, password); err != nil {
+		t.Fatalf("failed to login: %s", err)
+	}
+
+	defer client.Logout(context.Background())
+
+	startTime := time.Date(2021, 6, 1, 0, 0, 0, 0, time.Local)
+	endTime := time.Date(2021, 6, 10, 0, 0, 0, 0, time.Local)
+
+	_, err = client.ExportDailyNutrition(context.Background(), startTime, endTime)
+	if err != nil {
+		t.Fatalf("failed to export daily nutrition parsed: %s", err)
 	}
 
 }
@@ -238,7 +261,7 @@ func TestClient_ExportExercisesParsed(t *testing.T) {
 
 	_, err = client.ExportExercisesParsedWithLocation(context.Background(), startTime, endTime, time.UTC)
 	if err != nil {
-		t.Fatalf("failed to export bio: %s", err)
+		t.Fatalf("failed to export exercises parsed: %s", err)
 	}
 
 }
@@ -260,7 +283,7 @@ func TestClient_ExportBiometricRecordsParsed(t *testing.T) {
 
 	_, err = client.ExportBiometricRecordsParsedWithLocation(context.Background(), startTime, endTime, time.UTC)
 	if err != nil {
-		t.Fatalf("failed to export bio: %s", err)
+		t.Fatalf("failed to export bio parsed: %s", err)
 	}
 
 }
