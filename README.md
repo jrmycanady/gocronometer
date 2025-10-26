@@ -28,13 +28,13 @@ fmt.Println(rawCSVData)
 
 ## Exports Supported
 
-|method|description|
-|------|-----------|
-|ExportDailyNutrition()|Exports daily nutrition information for the date range provided.|
-|ExportServings()|Exports servings for the date range provided.|
-|ExportExercises()|Exports exercises for the date range provided.|
-|ExportBiometrics()|Exports biometrics for the date range provided.|
-|ExportNotes(|Exports notes for the date range provided.|
+| method                 |description|
+|------------------------|-----------|
+| ExportDailyNutrition() |Exports daily nutrition information for the date range provided.|
+| ExportServings()       |Exports servings for the date range provided.|
+| ExportExercises()      |Exports exercises for the date range provided.|
+| ExportBiometrics()     |Exports biometrics for the date range provided.|
+| ExportNotes()          |Exports notes for the date range provided.|
 
 ## API Magic Values
 
