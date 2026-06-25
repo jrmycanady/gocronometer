@@ -2,9 +2,13 @@
 gocronometer is an GPLv2 licensed Go module that provides a client for exporting data from 
 [Cronometer](https://cronometer.com). It utilizes the export features to retrieve the CSV data from the unpublished API.
 
-**NOTE:** This module utilizes the same API the SPA uses. For that reason it should only be used by single users wanting 
+**IMPORTANT:** This module utilizes the same API the SPA uses. For that reason it should only be used by single users wanting 
 to export their personal data for backup or other reasons. It should never be used for integrations that the enterprise 
 plan would cover. The library is licensed under the GPLv2 to help prevent the unacceptable usage.
+
+**IMPORTANT:** Cronometer allows up to 10 data exports per day for personal use. Any exports beyond this will be blocked. Please respect their limits and have your tooling limit it's collections. 
+
+**IMPORTANT:** Always scope your requests to a reasonable data range. Never continually export all data or data that you already have. 
 
 ## Basic Example
 ```go
